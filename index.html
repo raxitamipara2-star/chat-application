@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chat Application</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="app">
+
+<!-- LOGIN -->
+<div id="login" class="login-box">
+    <h1>💬 ChatSphere</h1>
+    <p>Enter your username to continue</p>
+    <input id="username" placeholder="Username">
+    <button onclick="login()">Join Chat</button>
+</div>
+
+<!-- CHAT -->
+<div id="chat" class="chat-layout" style="display:none">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h2>Rooms</h2>
+        <ul id="roomList"></ul>
+        <input id="newRoom" placeholder="New room">
+        <button onclick="createRoom()">Create</button>
+
+        <h2>Users</h2>
+        <ul id="users"></ul>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area">
+        <div id="messages" class="messages"></div>
+
+        <div class="toolbar">
+            <button onclick="format('bold')">B</button>
+            <button onclick="format('italic')">I</button>
+            <button onclick="format('link')">🔗</button>
+            <button onclick="toggleEmoji()">😊</button>
+        </div>
+
+     <div id="emojiPanel" class="emoji-panel" style="display:none">
+    <span>😀</span> <span>😁</span> <span>😂</span> <span>🤣</span>
+    <span>😍</span> <span>😎</span> <span>😢</span> <span>😡</span>
+    <span>👍</span> <span>🙏</span> <span>🎉</span> <span>❤️</span>
+    <span>🔥</span> <span>💯</span>
+</div>
+
+
+        <div class="input-box">
+            <input id="msg" placeholder="Type a message...">
+            <button onclick="send()">Send</button>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

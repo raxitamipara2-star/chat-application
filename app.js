@@ -1,25 +1,41 @@
-firebase.initializeApp({
-  projectId: "YOUR_FIREBASE_PROJECT_ID"
-});
+// 🔥 PASTE YOUR FIREBASE CONFIG HERE
+const firebaseConfig = {
+  apiKey: "AIzaSyDX_QAW9O4IyudEIbAMz4dyMPoG4o6DmlY",
+  authDomain: "gym-management-system-5829d.firebaseapp.com",
+  projectId: "gym-management-system-5829d",
+  storageBucket: "gym-management-system-5829d.firebasestorage.app",
+  messagingSenderId: "784832890384",
+  appId: "1:784832890384:web:0adcd0817f596c4ddaec95",
+  measurementId: "G-YFVSDWHMC0"
+};
 
+firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-let user = "";
-let room = "";
 
+let username = "";
+let currentRoom = "";
+let chatType = "room";
+let privateChatId = "";
+
+// LOGIN
 function login() {
-  user = username.value.trim();
-  if (!user) return alert("Enter username");
+  username = document.getElementById("username").value;
+  if (!username) return alert("Enter username");
 
   document.getElementById("login").style.display = "none";
   document.getElementById("chat").style.display = "flex";
+
   loadRooms();
 }
 
+// LOAD ROOMS (REAL-TIME)
 function loadRooms() {
-  db.collection("rooms").onSnapshot(snap => {
+  db.collection("rooms").onSnapshot(snapshot => {
+    const roomList = document.getElementById("roomList");
     roomList.innerHTML = "";
-    snap.forEach(doc => {
-      let li = document.createElement("li");
+
+    snapshot.forEach(doc => {
+      const li = document.createElement("li");
       li.textContent = doc.id;
       li.onclick = () => joinRoom(doc.id);
       roomList.appendChild(li);
@@ -27,109 +43,116 @@ function loadRooms() {
   });
 }
 
+// CREATE ROOM
 function createRoom() {
-  let r = newRoom.value.trim();
-  if (!r) return;
-  db.collection("rooms").doc(r).set({ created: true });
-}
+  const roomName = document.getElementById("newRoom").value;
+  if (!roomName) return;
 
-function joinRoom(r) {
-  room = r;
-  messages.innerHTML = "";
-
-  const userRef = db.collection("rooms").doc(room).collection("users").doc(user);
-
-  userRef.get().then(d => {
-    if (d.exists) {
-      alert("Username already in this room!");
-      room = "";
-      return;
-    }
-    userRef.set({ online: true });
-    sendSystem(`${user} joined`);
+  db.collection("rooms").doc(roomName).set({
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
 
-  loadUsers();
-
-  db.collection("rooms").doc(room).collection("messages")
-    .orderBy("time")
-    .onSnapshot(snap => {
-      messages.innerHTML = "";
-      snap.forEach(m => {
-        let d = m.data();
-        let div = document.createElement("div");
-        div.innerHTML = d.text;
-        messages.appendChild(div);
-      });
-      messages.scrollTop = messages.scrollHeight;
-    });
-
-  window.onbeforeunload = () => {
-    sendSystem(`${user} left`);
-    userRef.delete();
-  };
+  document.getElementById("newRoom").value = "";
 }
 
-function loadUsers() {
-  db.collection("rooms").doc(room).collection("users")
-    .onSnapshot(snap => {
-      users.innerHTML = "";
-      snap.forEach(u => {
-        let li = document.createElement("li");
-        li.textContent = u.id;
-        users.appendChild(li);
+// JOIN ROOM
+function joinRoom(roomName) {
+  chatType = "room";
+  currentRoom = roomName;
+  privateChatId = "";
+
+  document.getElementById("roomTitle").innerText = "Room: " + roomName;
+  document.getElementById("messages").innerHTML = "";
+
+  loadRoomMessages();
+}
+
+// LOAD ROOM MESSAGES
+function loadRoomMessages() {
+  db.collection("rooms")
+    .doc(currentRoom)
+    .collection("messages")
+    .orderBy("timestamp")
+    .onSnapshot(snapshot => {
+
+      const messagesDiv = document.getElementById("messages");
+      messagesDiv.innerHTML = "";
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        messagesDiv.innerHTML +=
+          "<p><b>" + data.user + ":</b> " + data.text + "</p>";
       });
+
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 }
 
-function send() {
-  let text = msg.value.trim();
-  if (!text || !room) return;
+// START PRIVATE CHAT
+function startPrivateChat() {
+  const otherUser = document.getElementById("privateUser").value;
+  if (!otherUser || otherUser === username) return;
 
-  let safe = escape(text);
-  let time = new Date().toLocaleTimeString();
+  const users = [username, otherUser].sort();
+  privateChatId = users.join("_");
 
-  db.collection("rooms").doc(room).collection("messages").add({
-    text: `<b>${user}</b>: ${safe} <small>${time}</small>`,
-    time: Date.now()
-  });
+  chatType = "private";
+  currentRoom = "";
 
-  msg.value = "";
+  document.getElementById("roomTitle").innerText =
+    "Private Chat: " + otherUser;
+
+  loadPrivateMessages();
 }
 
-function sendSystem(msg) {
-  db.collection("rooms").doc(room).collection("messages").add({
-    text: `<span class='system'>${msg}</span>`,
-    time: Date.now()
-  });
+// LOAD PRIVATE MESSAGES
+function loadPrivateMessages() {
+  db.collection("privateChats")
+    .doc(privateChatId)
+    .collection("messages")
+    .orderBy("timestamp")
+    .onSnapshot(snapshot => {
+
+      const messagesDiv = document.getElementById("messages");
+      messagesDiv.innerHTML = "";
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        messagesDiv.innerHTML +=
+          "<p><b>" + data.user + ":</b> " + data.text + "</p>";
+      });
+
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
 }
 
-function format(type) {
-  let m = msg.value;
-  if (type == "bold") msg.value = "**" + m + "**";
-  if (type == "italic") msg.value = "_" + m + "_";
-  if (type == "link") msg.value = "[text](url)";
-}
+// SEND MESSAGE
+function sendMessage() {
+  const text = document.getElementById("msg").value;
+  if (!text) return;
 
-function escape(str) {
-  return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-// Toggle emoji panel
-function toggleEmoji() {
-    const panel = document.getElementById("emojiPanel");
-    if (panel.style.display === "none" || panel.style.display === "") {
-        panel.style.display = "block";
-    } else {
-        panel.style.display = "none";
-    }
-}
+  if (chatType === "room" && currentRoom) {
 
-// Insert emoji into message box when clicked
-document.addEventListener("click", function (e) {
-    if (e.target.closest("#emojiPanel")) {
-        const emoji = e.target.innerText;
-        if (emoji.trim() !== "") {
-            document.getElementById("msg").value += emoji;
-        }
-    }
-});
+    db.collection("rooms")
+      .doc(currentRoom)
+      .collection("messages")
+      .add({
+        user: username,
+        text: text,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+  } else if (chatType === "private" && privateChatId) {
+
+    db.collection("privateChats")
+      .doc(privateChatId)
+      .collection("messages")
+      .add({
+        user: username,
+        text: text,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+  }
+
+  document.getElementById("msg").value = "";
+}
